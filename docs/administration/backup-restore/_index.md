@@ -3,17 +3,17 @@ title: Backup And Restore Harbor With Velero
 weight: 50
 ---
 
-Backup and restore is important for disaster recovery and data migration scenarios. With a tool like [Velero](https://velero.io/), you can backup and restore your Harbor instances and avoid disruptions in service in the event of a disaster. Velero is is an open source tool you can use to safely backup and restore, perform disaster recovery, and migrate Kubernetes cluster resources and persistent volumes.
+Backup and restore is important for disaster recovery and data migration scenarios. With a tool like [Velero](https://velero.io/), you can backup and restore your Harbor instances and avoid disruptions in service in the event of a disaster. Velero is an open-source tool you can use to safely backup and restore, perform disaster recovery, and migrate Kubernetes cluster resources and persistent volumes.
 
-The following tutorial shows how to use Velero to backup and restore a Harbor instance that has been deployed in a Kubernetes cluster using the Harbor helm chart. See more details about [How Velero Works](https://velero.io/docs/v1.9/how-velero-works/).
+The following tutorial shows how to use Velero to back up and restore a Harbor instance that has been deployed in a Kubernetes cluster using the Harbor helm chart. See more details about [How Velero Works](https://velero.io/docs/v1.9/how-velero-works/).
 
 {{< important >}}
 
-This tutorial only backs up a subset of Harbor's resources and data, including all Harbor related Kubernetes resources (Deployments, StatefulSets, Services, ConfigMaps, etc.) and data in the PersistentVolumes of Harbor's internal database, registry, chartmuseum, jobservice and Trivy.
+This tutorial only backs up a subset of Harbor's resources and data, including all Harbor-related Kubernetes resources (Deployments, StatefulSets, Services, ConfigMaps, etc.) and data in the PersistentVolumes of Harbor's internal database, registry, chartmuseum, jobservice and Trivy.
 
-Harbor's Redis data is not backed up, see the [Limitations](#limitations) section for more details of the potential impact to your Harbor instance.
+Harbor's Redis data is not backed up, see the [Limitations](#limitations) section for more details of the potential impact on your Harbor instance.
 
-The backup taken in this tutorial is crash consistent, not application consistent. This means that some data will be lost after restore, see the [Limitations](#limitations) part for more information.
+The backup taken in this tutorial is crash-consistent, not application-consistent. This means that some data will be lost after restore, see the [Limitations](#limitations) part for more information.
 {{< /important >}}
 
 ## Install Velero
@@ -36,8 +36,8 @@ Depending on the size of your data, you may need to increase the CPU or memory r
 ### Backup Harbor Instance
 According to the capability of the platform where Harbor is deployed, you can choose back up the PersistentVolumes with Snapshot or Restic:
 * Snapshot  
-  If you want to use snapshots to backup the PersistentVolumes, make sure there is a [corresponding Velero plugin](https://velero.io/docs/v1.9/supported-providers/) for your Kubernetes provider.
-  1. In order to exclude the volume of Redis in backup, we need to label the Redis pod, PVC and PV with specific label:
+  If you want to use snapshots to back up the PersistentVolumes, make sure there is a [corresponding Velero plugin](https://velero.io/docs/v1.9/supported-providers/) for your Kubernetes provider.
+  1. In order to exclude the volume of Redis in the backup, we need to label the Redis pod, PVC and PV with specific label:
      ```shell
       # label the Pod of Redis, replace the namespace and Pod name with yours
       kubectl -n harbor label pod/harbor-redis-0 velero.io/exclude-from-backup=true
@@ -55,7 +55,7 @@ According to the capability of the platform where Harbor is deployed, you can ch
       ```
 
 * Restic  
-  If you want to take volume snapshots but didn’t find a plugin for your provider, Velero has support for snapshotting using restic. Before using restic, you should review the Velero [restic integration](https://velero.io/docs/latest/restic/) page, and especially understand [restic limitations](https://velero.io/docs/latest/restic/#limitations).
+  If you want to take volume snapshots but didn’t find a plugin for your provider, Velero has support for snapshotting using Restic. Before using restic, you should review the Velero [restic integration](https://velero.io/docs/latest/restic/) page, and especially understand [restic limitations](https://velero.io/docs/latest/restic/#limitations).
   1. Exclude the volume of Redis in backup
       ```shell
       # replace the namespace and pod name with yours
@@ -82,17 +82,17 @@ As we set Harbor to ReadOnly when doing the backup, the instance is still in Rea
 
 
 ## Troubleshooting
-If you have any issue while backing up or restoring, please refer to Velero's [troubleshooting](https://velero.io/docs/latest/troubleshooting/) documentation.
+If you have any issues while backing up or restoring, please refer to Velero's [troubleshooting](https://velero.io/docs/latest/troubleshooting/) documentation.
 
 ## Limitations
 * **The upload purging process may cause backup failure**  
   A purging process starts in the `registry` pod by default, it removes the unused files under the upload directory periodically and cannot be disabled without restarting. This may impact the backup when using Restic and cause failures.  
   It's better to increase the [interval](https://github.com/goharbor/harbor-helm/blob/v1.9.2/values.yaml#L581) of the purging operation(the default value is 168h) and do the backup in the middle of two rounds of purging to avoid files being removed.
 * **The data in memory is lost during the backup**  
-  Harbor stores repository pull and artifact pull times in memory and syncs them periodically into Harbor's database. This means that any data that isn't synced into the database when you take a backup is lost. This data loss should be low impact to your restored Harbor instance.
+  Harbor stores repository pull and artifact pull times in memory and syncs them periodically into Harbor's database. This means that any data that isn't synced into the database when you take a backup is lost. This data loss should have a low impact on your restored Harbor instance.
 * **Tasks may hang in the in-progress status after restore**  
   Harbor tasks, such as replication, garbage collection, or security scans may hang in the in-progress status after restore. You can manually stop them on the portal.
-* **Sessions of logged users will lose after restore**  
-  As we don't back up the persistent volume of Redis, the sessions of logged used will is lost after restore.
+* **Sessions of logged-in users will be lost after restore**  
+  As we don't back up the persistent volume of Redis, the sessions of the logged-in user will be lost after restore.
 * **Backups of external databases are not supported**  
 Only backups of the Harbor internal database is supported.
